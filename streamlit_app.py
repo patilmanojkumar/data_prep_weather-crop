@@ -77,14 +77,11 @@ def process_data(commodity_df, weather_df, selected_cvg):
     
     # Define aggregation methods for different weather parameters
     weather_agg_methods = {
-        'PRECTOT': 'sum',  # Total precipitation
+        'PRECTOTCORR': 'sum',  # Total precipitation
         'T2M': 'mean',     # Temperature
         'T2M_MAX': 'max',  # Maximum temperature
         'T2M_MIN': 'min',  # Minimum temperature
         'RH2M': 'mean',    # Relative humidity
-        'WS2M': 'mean',    # Wind speed
-        'ALLSKY_SFC_SW_DWN': 'sum',  # Solar radiation
-        'ALLSKY_SFC_PAR_TOT': 'sum'  # Photosynthetically active radiation
     }
     
     # Process weather data with specific aggregations
