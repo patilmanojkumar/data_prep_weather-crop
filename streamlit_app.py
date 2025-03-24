@@ -50,51 +50,49 @@ def select_best_cvgs(df, n=3, preferred_markets=None):
 
 def process_data(commodity_df, weather_df, selected_cvg):
     # Filter commodity data for selected CVG
-    df = commodity_df[commodity_df['CVG'] == selected_cvg][['Date', 'Modal', 'Arrivals']].copy()
+    df = commodity_df[commodity_df['CVG'] == selected_cvg][['Date', 'Modal', 'Arrivals']]
     
     # Handle mixed date formats
     df['Date'] = df['Date'].apply(parse_mixed_dates)
-
-    # 🔍 Debug: Check column names in weather data
-    print("Weather Data Columns:", weather_df.columns)
-
-    # Ensure required columns exist
-    required_cols = {'YEAR', 'MO', 'DY'}
-    missing_cols = required_cols - set(weather_df.columns)
-    if missing_cols:
-        raise KeyError(f"Missing columns in weather data: {missing_cols}")
-
-    # Process weather data - Fix date conversion
-    weather_df.dropna(subset=['YEAR', 'MO', 'DY'], inplace=True)  # Remove missing values
-    weather_df[['YEAR', 'MO', 'DY']] = weather_df[['YEAR', 'MO', 'DY']].astype(int)  # Ensure integers
-    weather_df['Date'] = pd.to_datetime(weather_df[['YEAR', 'MO', 'DY']])
-    weather_df.drop(['YEAR', 'MO', 'DY'], axis=1, inplace=True)
     
+    # Process weather data - Fix date conversion
+    weather_df['Date'] = pd.to_datetime({
+        'year': weather_df['YEAR'],
+        'month': weather_df['MO'],
+        'day': weather_df['DY']
+    })
+    weather_df.drop(['YEAR', 'MO', 'DY'], axis=1, inplace=True)
     weather_df.replace(-999, pd.NA, inplace=True)
     
-    # Resample Commodity Data
-    df_weekly = df.resample('W-SUN', on='Date').agg({'Modal': 'mean', 'Arrivals': 'sum'}).reset_index()
-    df_monthly = df.resample('MS', on='Date').agg({'Modal': 'mean', 'Arrivals': 'sum'}).reset_index()
+    # Create weekly and monthly data
+    df_weekly = df.resample('W-SUN', on='Date').agg({
+        'Modal': 'mean',
+        'Arrivals': 'sum'
+    }).reset_index()
     
-    # Define aggregation methods for weather parameters
+    df_monthly = df.resample('MS', on='Date').agg({
+        'Modal': 'mean',
+        'Arrivals': 'sum'
+    }).reset_index()
+    
+    # Define aggregation methods for different weather parameters
     weather_agg_methods = {
-        'PRECTOTCORR': 'sum',  
-        'T2M': 'mean',     
-        'T2M_MAX': 'max',  
-        'T2M_MIN': 'min',  
-        'RH2M': 'mean',
+        'T2M': 'mean',           # Temperature - average
+        'T2M_MAX': 'max',        # Maximum temperature - maximum
+        'T2M_MIN': 'min',        # Minimum temperature - minimum
+        'PRECTOTCORR': 'sum',        # Precipitation - sum
+        'RH2M': 'mean',          # Relative humidity - average
     }
     
-    # Resample Weather Data
+    # Process weather data with specific aggregation methods
     weather_weekly = weather_df.resample('W-SUN', on='Date').agg(weather_agg_methods).reset_index()
     weather_monthly = weather_df.resample('MS', on='Date').agg(weather_agg_methods).reset_index()
     
-    # Merge Data
+    # Merge data
     weekly_final = pd.merge(df_weekly, weather_weekly, on='Date', how='left')
     monthly_final = pd.merge(df_monthly, weather_monthly, on='Date', how='left')
     
     return weekly_final, monthly_final
-
 
 def main():
     # Initialize session state for processed data and file data
